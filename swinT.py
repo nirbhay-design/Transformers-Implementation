@@ -44,53 +44,51 @@ class ImageWPosEnc(nn.Module):
                                           self.embed_size)
 
         self.num_embedding = (self.image_size // self.patch_size) ** 2
-        self.pos_encoding = nn.Parameter(torch.rand(1, self.num_embedding + 1, self.embed_size, device=self.device))
-        self.cls_token = nn.Parameter(torch.rand(1, 1, self.embed_size, device=self.device))
+        self.pos_encoding = nn.Parameter(torch.rand(1, self.num_embedding, self.embed_size, device=self.device))
 
     def forward(self, x):
         B,_,_,_ = x.shape         
         patch_embeddings = self.patch_embed(x)
         pos_encoding = self.pos_encoding.repeat(B, 1, 1)
-        cls_token = self.cls_token.repeat(B, 1, 1)
-        patch_cls = torch.cat([cls_token, patch_embeddings], dim = 1)
-        embeddings = patch_cls + pos_encoding 
+        embeddings = patch_embeddings + pos_encoding 
 
         return embeddings
 
 class Attention(nn.Module):
-    def __init__(self, embed_dim, dropout=0.0):
+    def __init__(self, embed_dim):
         super().__init__()
         self.qkv = nn.Linear(embed_dim, 3 * embed_dim)
-        self.proj = nn.Linear(embed_dim, embed_dim)
-        self.dropout = nn.Dropout(dropout)
         self.embed_dim = embed_dim
     
-    def forward(self, x, bias=None):
+    def forward(self, x, bias=None, mask = None):
         # x:shape -> [B, HW/MM, num_heads, MM, head_dim]
+        # mask:shape -> [HW/MM, MM, MM]
+        # bias:shape -> [MM, MM]
         q, k, v = self.qkv(x).chunk(3, dim=-1)
         qkt = torch.matmul(q, k.transpose(-2,-1)) / math.sqrt(self.embed_dim)
-        if bias == None:
-            attention = torch.matmul(F.softmax(qkt, dim = -1), v)
-        else:
-            attention = torch.matmul(F.softmax(qkt + bias, dim = -1), v)
-        attention = self.dropout(self.proj(attention))
+        if bias is not None:
+            qkt = qkt + bias 
+        if mask is not None:
+            qkt = qkt + mask.unsqueeze(1).unsqueeze(0)
+        attention = torch.matmul(F.softmax(qkt, dim = -1), v)
         return attention
 
-class WSWMSA(nn.Module):
+class SWMSA(nn.Module):
     def __init__(self, image_resolution, window_size = 2, num_heads = 8, embed_dim = 128, shift_size = 0, dropout=0.0):
         super().__init__()
         assert embed_dim % num_heads == 0, "num heads should be a multiple of embed_dim"
         h,w = image_resolution
         assert h % window_size == 0  and w % window_size == 0, "height and width must be divisible by window size"
         self.head_dim = embed_dim // num_heads
-        self.attention = Attention(self.head_dim, dropout)
+        self.attention = Attention(self.head_dim)
         self.num_heads = num_heads
         self.embed_dim = embed_dim
         self.image_resolution = image_resolution
         self.window_size = window_size
         self.shift_size = shift_size
 
-        self.bias = nn.Parameter(torch.zeros(2 * window_size - 1, 2 * window_size - 1))
+        self.proj = nn.Linear(embed_dim, embed_dim)
+        self.dropout = nn.Dropout(dropout)
 
     def patch_format(self, x, image_res):
         B, _, embed_dim = x.shape
@@ -98,8 +96,7 @@ class WSWMSA(nn.Module):
         x = x.reshape(B, H, W, embed_dim)
         return x
 
-    def window_partition(self, x, image_res, window_size):
-        x = self.patch_format(x, image_res)
+    def window_partition(self, x, window_size): # x_shape: [B, H, W, dim]
         B, H, W, embed_dim = x.shape
         win_h = H // window_size
         win_w = W // window_size
@@ -109,14 +106,13 @@ class WSWMSA(nn.Module):
         x = x.reshape(B, win_h, window_size, win_w, window_size, embed_dim).permute(0,1,3,2,4,5)\
             .reshape(B, window_tokens_dim, window_dim, embed_dim)
 
-        return x, window_tokens_dim
+        return x
     
     def reverse_window(self, x):
         B, _, _, embed_dim = x.shape
         return x.reshape(B, -1, embed_dim)
     
-    def cycle_shift(self, x, image_res, shift_size):
-        x = self.patch_format(x, image_res)
+    def cycle_shift(self, x, shift_size):# x_shape: [B, H, W, dim]
         B, _, _, embed_dim = x.shape
 
         x1 = x[:, :shift_size, :shift_size, :]
@@ -131,8 +127,7 @@ class WSWMSA(nn.Module):
 
         return cross_window
     
-    def reverse_cycle_shift(self, x, image_res, shift_size):
-        x = self.patch_format(x, image_res)
+    def reverse_cycle_shift(self, x, shift_size):# x_shape: [B, H, W, dim]
         B, _, _, embed_dim = x.shape
 
         x1 = x[:, -shift_size:, -shift_size:, :]
@@ -147,27 +142,64 @@ class WSWMSA(nn.Module):
 
         return orig_win
     
-    def window_attention(self, x):
-        B = x.shape[0]
-        x, window_tokens_dim = self.window_partition(x, self.image_resolution, self.window_size)
-        window_dim = self.window_size ** 2
+    def window_attention(self, x, mask=None):
+        x = self.patch_format(x, self.image_resolution)
+        x = self.window_partition(x, self.window_size)
+        B, window_tokens_dim, window_dim, _ = x.shape
         # x -> [B, HW/MM, MM, heads, head_dim] -> [B, HW/MM, heads, MM, head_dim]
         x = x.reshape(B, window_tokens_dim, window_dim, self.num_heads, self.head_dim).permute(0, 1, 3, 2, 4)
-        x = self.attention(x)
+        x = self.attention(x, mask=None)
         # x -> [B, HW/MM, MM, heads, head_dim] -> [B, HW/MM, MM, heads*head_dim] 
         x = x.permute(0,1,3,2,4).flatten(-2)
         # [B, HW, embed_dim]
         x = self.reverse_window(x)
         return x
     
-    def shifted_window_attention(self, x):
-        shifted_x = self.cycle_shift(x, self.image_resolution, shift_size = self.shift_size)
+    def create_mask(self, image_resolution, window_size, shift_size):
+        H,W = image_resolution
+        image_mask = torch.zeros(1, H, W, 1)
+        h_slices = (slice(0, -window_size),
+                    slice(-window_size, -shift_size),
+                    slice(-shift_size, None))
+        w_slices = (slice(0, -window_size),
+                    slice(-window_size, -shift_size),
+                    slice(-shift_size, None))
+        cnt = 0
+        for h in h_slices:
+            for w in w_slices:
+                image_mask[:,h,w,:] = cnt
+                cnt += 1
 
+         # size: [1, HW/MM, MM, 1] -> [HW/MM, MM]
+        mask_window = self.window_partition(image_mask, window_size).reshape(1, -1, window_size ** 2)
+        # target_dim = [1, HW/MM, 1, MM, MM]
+        mask_window = mask_window.unsqueeze(1) - mask_window.unsqueeze(2) # size: [HW/MM, MM, MM]
+        mask_window[mask_window != 0] = float(-100)
+        # print(mask_window.unique())
+        return mask_window
         
+    def shifted_window_attention(self, x):
+        x = self.patch_format(x, self.image_resolution)
+        shifted_x = self.cycle_shift(x, shift_size = self.shift_size)
+        mask = self.create_mask(self.image_resolution,
+                                self.window_size,
+                                self.shift_size)
+        # mask based window attention
+        shifted_attention = self.window_attention(shifted_x, mask)
 
-        reverse_shift_x = self.reverse_cycle_shift(x, self.image_resolution, shift_size = self.shift_size)
+        shifted_attention = self.patch_format(shifted_attention, self.image_resolution)
+        reverse_shift_x = self.reverse_cycle_shift(shifted_attention, shift_size = self.shift_size)
 
+        return reverse_shift_x
+    
     def forward(self, x):
+        if self.shift_size == 0:
+            # simple window attention
+            x = self.window_attention(x)
+        else:
+            # shfited window attention
+            x = self.shifted_window_attention(x)
+        x = self.dropout(self.proj(x))
         return x
 
 class MLP(nn.Module):
@@ -209,18 +241,62 @@ class PatchMerging(nn.Module):
         return linear_x
 
 class SwinTransformerBlock(nn.Module):
-    def __init__(self, dim, dropout=0.0):
+    def __init__(self, image_resolution, num_heads, window_size, shift_size, dim, dropout=0.0):
         super().__init__()
         self.ln1 = nn.LayerNorm(dim)
         self.ln2 = nn.LayerNorm(dim)
         self.mlp = MLP(embed_dim=dim,
                        hidden_dim=dim,
                        dropout = dropout)
-        self.wmsa = None
-        self.msa = None
+        self.wmsa = SWMSA(image_resolution=image_resolution,
+                          window_size=window_size,
+                          num_heads=num_heads,
+                          embed_dim=dim,
+                          shift_size=0,
+                          dropout = dropout
+                        )
+        self.swmsa = SWMSA(image_resolution=image_resolution,
+                         window_size=window_size,
+                         num_heads=num_heads,
+                         shift_size=shift_size,
+                         embed_dim=dim,
+                         dropout=dropout)
 
     def forward(self, x):
-        pass       
+        x = self.wmsa(self.ln1(x)) + x   
+        print(x.shape)
+        x = self.mlp(self.ln1(x)) + x
+        x = self.swmsa(self.ln2(x)) + x
+        x = self.mlp(self.ln2(x)) + x
+        return x
+    
+class PatchMergeSTB(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        pass 
+    
+class SwinTransformer(nn.Module):
+    def __init__(self, image_resolution, patch_size, num_heads, window_size, shift_size, embed_dim, layers, dropout=0.0):
+        super().__init__()
+        self.image_patch_embedding = ImageWPosEnc(image_resolution,
+                                                  in_channels=3,
+                                                  patch_size = patch_size,
+                                                  embed_size = embed_dim) # return image with image_size image_resolution // patch_size
+        self.image_resolution = (i // patch_size for i in image_resolution)
+        self.stb1 = nn.ModuleList([
+                SwinTransformerBlock(
+                    image_resolution=self.image_resolution,
+                    num_heads = num_heads,
+                    window_size = window_size,
+                    shift_size = shift_size,
+                    dim = embed_dim,
+                    dropout = dropout
+                ) for _ in range(layers[0])])
+        
+
+
 
 if __name__ == "__main__":
     a = torch.rand(2,3,224,224)
@@ -231,13 +307,14 @@ if __name__ == "__main__":
     final_patch = pe(a)
     print(final_patch.shape)
     window_size = 4
-    wmsa = WSWMSA(image_resolution= (a.shape[2]//patch_size, a.shape[3]//patch_size),
-                window_size=window_size,
-                num_heads = 8,
-                embed_dim = 128,
-                dropout=0.3)
-    wattn = wmsa(final_patch)
-    print(wattn.shape)
+    shift_size = window_size // 2
+    stb = SwinTransformerBlock(image_resolution = (a.shape[2] // patch_size, a.shape[3] // patch_size),
+                               num_heads = 8,
+                               window_size = window_size,
+                               shift_size = shift_size,
+                               dim = 128,
+                               dropout = 0.4)
+    print(stb(final_patch).shape)
     # pm = PatchMerging(image_resolution= (),
     #                   C=128)
     # out = pm(final_patch)
