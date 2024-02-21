@@ -28,9 +28,9 @@ class PatchEmbedding(nn.Module):
         return patch_embeddings
     
 class ImageWPosEnc(nn.Module):
-    def __init__(self, image_size = 224, in_channels = 3, patch_size = 8, embed_size = 128):
+    def __init__(self, image_size = (224, 224), in_channels = 3, patch_size = 8, embed_size = 128):
         super().__init__()
-        self.image_size = image_size 
+        self.image_size = image_size[0]
         self.in_channels = in_channels
         self.patch_size = patch_size 
         self.embed_size = embed_size 
@@ -264,27 +264,19 @@ class SwinTransformerBlock(nn.Module):
 
     def forward(self, x):
         x = self.wmsa(self.ln1(x)) + x   
-        print(x.shape)
         x = self.mlp(self.ln1(x)) + x
         x = self.swmsa(self.ln2(x)) + x
         x = self.mlp(self.ln2(x)) + x
         return x
     
-class PatchMergeSTB(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        pass 
-    
 class SwinTransformer(nn.Module):
-    def __init__(self, image_resolution, patch_size, num_heads, window_size, shift_size, embed_dim, layers, dropout=0.0):
+    def __init__(self, image_resolution, num_classes, patch_size, num_heads, window_size, shift_size, embed_dim, layers, dropout=0.0):
         super().__init__()
         self.image_patch_embedding = ImageWPosEnc(image_resolution,
                                                   in_channels=3,
                                                   patch_size = patch_size,
                                                   embed_size = embed_dim) # return image with image_size image_resolution // patch_size
-        self.image_resolution = (i // patch_size for i in image_resolution)
+        self.image_resolution = self.img_res(image_resolution, patch_size)
         self.stb1 = nn.ModuleList([
                 SwinTransformerBlock(
                     image_resolution=self.image_resolution,
@@ -295,26 +287,96 @@ class SwinTransformer(nn.Module):
                     dropout = dropout
                 ) for _ in range(layers[0])])
         
+        self.patch_merging1 = PatchMerging(self.image_resolution, embed_dim) # return height and width divided by 2 and channel multiplied by 2
+        self.image_resolution = self.img_res(self.image_resolution, 2)
+        self.stb2 = nn.ModuleList([
+            SwinTransformerBlock(
+                image_resolution=self.image_resolution,
+                num_heads = num_heads,
+                window_size = window_size,
+                shift_size = shift_size,
+                dim = 2 * embed_dim
+            ) for _ in range(layers[1])
+        ])
 
+        self.patch_merging2 = PatchMerging(self.image_resolution, 2 * embed_dim)
+        self.image_resolution = self.img_res(self.image_resolution, 2)
+        self.stb3 = nn.ModuleList([
+            SwinTransformerBlock(
+                image_resolution=self.image_resolution,
+                num_heads = num_heads,
+                window_size = window_size,
+                shift_size = shift_size,
+                dim = 4 * embed_dim
+            )
+        ])
+
+        self.patch_merging3 = PatchMerging(self.image_resolution, 4 * embed_dim)
+        self.image_resolution = self.img_res(self.image_resolution, 2)
+        self.stb4 = nn.ModuleList([
+            SwinTransformerBlock(
+                image_resolution=self.image_resolution,
+                num_heads = num_heads,
+                window_size = window_size,
+                shift_size = shift_size,
+                dim = 8 * embed_dim
+            )
+        ])
+        self.silu = nn.SiLU()
+        self.fc = nn.Linear(embed_dim * 8, num_classes)
+        
+    def img_res(self, res, divisor):
+        return [i // divisor for i in res]
+        
+    def forward(self, x):
+        x = self.image_patch_embedding(x)
+
+        for module in self.stb1:
+            x = module(x)
+
+        x = self.patch_merging1(x)
+        for module in self.stb2:
+            x = module(x)
+        
+        x = self.patch_merging2(x)
+        for module in self.stb3:
+            x = module(x)
+
+        x = self.patch_merging3(x)
+        for module in self.stb4:
+            x = module(x)
+
+        B, _, dim = x.shape
+        h,w = self.image_resolution
+        x = x.reshape(B, h, w, dim).permute(0, 3, 1, 2)
+        x = F.adaptive_avg_pool2d(x, output_size = (1,1))
+        x = x.flatten(1)
+        x = self.fc(self.silu(x))
+        
+        return x
 
 
 if __name__ == "__main__":
     a = torch.rand(2,3,224,224)
     patch_size = 4
-    pe = PatchEmbedding(in_channels=3,
-                        patch_size=patch_size,
-                        C=128)
-    final_patch = pe(a)
-    print(final_patch.shape)
-    window_size = 4
+    window_size = 7
     shift_size = window_size // 2
-    stb = SwinTransformerBlock(image_resolution = (a.shape[2] // patch_size, a.shape[3] // patch_size),
-                               num_heads = 8,
-                               window_size = window_size,
-                               shift_size = shift_size,
-                               dim = 128,
-                               dropout = 0.4)
-    print(stb(final_patch).shape)
+    embed_dim = 96
+    num_heads = 3
+    num_classes = 10
+    pmstb = SwinTransformer(
+        image_resolution= (224,224),
+        num_classes=num_classes,
+        patch_size=patch_size,
+        num_heads = num_heads,
+        window_size = window_size,
+        shift_size = shift_size,
+        embed_dim = embed_dim,
+        layers = [2, 2, 6, 2],
+        dropout = 0.6
+    )
+    
+    print(pmstb(a).shape)
     # pm = PatchMerging(image_resolution= (),
     #                   C=128)
     # out = pm(final_patch)
