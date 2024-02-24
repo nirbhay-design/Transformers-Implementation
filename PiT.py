@@ -45,17 +45,14 @@ class ImageWPosEnc(nn.Module):
         self.patch_size = getHW(patch_size) 
         self.embed_size = embed_size 
 
-        # self.device = torch.device("cuda:0" if torch.cuda.is_available else "cpu")
-        self.device = torch.device("cpu")
-
         self.patch_embed = PatchEmbedding(self.image_size,
                                         self.in_channels,
                                         self.patch_size,
                                         self.embed_size)
 
         self.num_embedding = (self.image_size[0] // self.patch_size[0]) * (self.image_size[1] // self.patch_size[1])
-        self.pos_encoding = nn.Parameter(torch.rand(1, self.num_embedding + 1, self.embed_size, device=self.device))
-        self.cls_token = nn.Parameter(torch.rand(1, 1, self.embed_size, device=self.device))
+        self.pos_encoding = nn.Parameter(torch.rand(1, self.num_embedding + 1, self.embed_size))
+        self.cls_token = nn.Parameter(torch.rand(1, 1, self.embed_size))
 
     def forward(self, x):
         B,_,_,_ = x.shape         
