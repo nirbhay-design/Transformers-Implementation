@@ -2,7 +2,7 @@
 
 ## Papers Implemented
 
-- [ ] [Rethinking Spatial Dimensions of Vision Transformers](https://openaccess.thecvf.com/content/ICCV2021/papers/Heo_Rethinking_Spatial_Dimensions_of_Vision_Transformers_ICCV_2021_paper.pdf)
+- [x] [Rethinking Spatial Dimensions of Vision Transformers](https://openaccess.thecvf.com/content/ICCV2021/papers/Heo_Rethinking_Spatial_Dimensions_of_Vision_Transformers_ICCV_2021_paper.pdf)
 
 - [ ] [Training data-efficient image transformers & distillation through attention](https://arxiv.org/pdf/2012.12877.pdf)
 
