@@ -11,3 +11,9 @@
 - [x] [Swin Transformer: Hierarchical Vision Transformer using Shifted Windows](https://arxiv.org/pdf/2103.14030.pdf)
 
 - [ ] [SwinIR: Image Restoration Using Swin Transformer](https://arxiv.org/abs/2108.10257)
+
+- [ ] [Pyramid Vision Transformer: PVT](https://arxiv.org/pdf/2102.12122.pdf)
+
+- [ ] [Deep Vision Transformer: DViT](https://arxiv.org/pdf/2103.11886.pdf)
+
+- 
