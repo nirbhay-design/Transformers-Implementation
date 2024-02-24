@@ -5,19 +5,29 @@ import torch.nn.functional as F
 import torch.optim as optim 
 import torchvision.transforms as transforms 
 
+def getHW(size):
+    if isinstance(size, int):
+        return size, size
+    elif isinstance(size, tuple) or isinstance(size, list):
+        return size 
+
+
 class PatchEmbedding(nn.Module):
-    def __init__(self, in_channels = 3, patch_size = 8, embed_size = 128):
+    def __init__(self, image_size, in_channels = 3, patch_size = 8, embed_size = 128):
         super().__init__()
-        self.linear = nn.Linear(patch_size * patch_size * in_channels, embed_size)
+        self.patch_size_h, self.patch_size_w = getHW(patch_size)
+        h,w = getHW(image_size)
+        assert h % self.patch_size_h == 0 and w % self.patch_size_w == 0, "image_size should be divisible by patch_size"
+        self.linear = nn.Linear(self.patch_size_h * self.patch_size_w * in_channels, embed_size)
         self.patch_size = patch_size
 
     def patch_image(self, x):
         B,C,H,W = x.shape
-        H_patch = H // self.patch_size 
-        W_patch = W // self.patch_size
-        x = x.reshape(B, C, H_patch, self.patch_size, W_patch, self.patch_size)
+        H_patch = H // self.patch_size_h 
+        W_patch = W // self.patch_size_w
+        x = x.reshape(B, C, H_patch, self.patch_size_h, W_patch, self.patch_size_w)
         x = x.permute(0, 2, 4, 3, 5, 1)
-        x = x.reshape(B, H_patch * W_patch, self.patch_size * self.patch_size * C)
+        x = x.reshape(B, H_patch * W_patch, self.patch_size_h * self.patch_size_w * C)
         return x
 
     def forward(self, x):
@@ -30,20 +40,20 @@ class PatchEmbedding(nn.Module):
 class ImageWPosEnc(nn.Module):
     def __init__(self, image_size = 224, in_channels = 3, patch_size = 8, embed_size = 128):
         super().__init__()
-        self.image_size = image_size 
+        self.image_size = getHW(image_size) 
         self.in_channels = in_channels
-        self.patch_size = patch_size 
+        self.patch_size = getHW(patch_size) 
         self.embed_size = embed_size 
 
-        assert self.image_size % self.patch_size == 0, "patch_size should be a multiple of image_size"
         # self.device = torch.device("cuda:0" if torch.cuda.is_available else "cpu")
         self.device = torch.device("cpu")
 
-        self.patch_embed = PatchEmbedding(self.in_channels,
-                                          self.patch_size,
-                                          self.embed_size)
+        self.patch_embed = PatchEmbedding(self.image_size,
+                                        self.in_channels,
+                                        self.patch_size,
+                                        self.embed_size)
 
-        self.num_embedding = (self.image_size // self.patch_size) ** 2
+        self.num_embedding = (self.image_size[0] // self.patch_size[0]) * (self.image_size[1] // self.patch_size[1])
         self.pos_encoding = nn.Parameter(torch.rand(1, self.num_embedding + 1, self.embed_size, device=self.device))
         self.cls_token = nn.Parameter(torch.rand(1, 1, self.embed_size, device=self.device))
 
@@ -163,7 +173,7 @@ if __name__ == "__main__":
 
     out = vit(a)
     params = lambda x: sum([y.numel() for y in x.parameters()])
-    print(vit)
+    # print(vit)
     print(params(vit))
     print(out.shape)
     
