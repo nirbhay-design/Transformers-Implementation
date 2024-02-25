@@ -12,7 +12,7 @@
 
 - [ ] [SwinIR: Image Restoration Using Swin Transformer](https://arxiv.org/abs/2108.10257)
 
-- [ ] [Pyramid Vision Transformer: PVT](https://arxiv.org/pdf/2102.12122.pdf)
+- [x] [Pyramid Vision Transformer: PVT](https://arxiv.org/pdf/2102.12122.pdf)
 
 - [x] [Deep Vision Transformer: DViT](https://arxiv.org/pdf/2103.11886.pdf)
 
