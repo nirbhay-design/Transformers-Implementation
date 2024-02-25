@@ -80,7 +80,7 @@ class ReAttentionMSA(nn.Module):
         qkv = self.qkv(x)
         q, k, v = qkv.chunk(3, dim = -1)  
         # [B, num_heads, tokens, tokens]
-        qkt = F.softmax(torch.matmul(q, k.transpose(-2,-1)) / math.sqrt(self.embed_dim), dim = -1)
+        qkt = F.softmax(torch.matmul(q, k.transpose(-2,-1)) / math.sqrt(self.head_dim), dim = -1)
         reattention = self.reattention_norm(self.reattention_matrix(qkt))
         reattention = torch.matmul(reattention, v)
         return reattention
