@@ -14,6 +14,6 @@
 
 - [ ] [Pyramid Vision Transformer: PVT](https://arxiv.org/pdf/2102.12122.pdf)
 
-- [ ] [Deep Vision Transformer: DViT](https://arxiv.org/pdf/2103.11886.pdf)
+- [x] [Deep Vision Transformer: DViT](https://arxiv.org/pdf/2103.11886.pdf)
 
-- 
+- [ ] [Shuffle Transformer](https://arxiv.org/pdf/2106.03650.pdf)
