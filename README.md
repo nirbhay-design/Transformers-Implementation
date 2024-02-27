@@ -16,6 +16,10 @@
 
 - [x] [Deep Vision Transformer: DViT](https://arxiv.org/pdf/2103.11886.pdf)
 
-- [ ] [Twins: Revisiting the Design of Spatial Attention in Vision Transformers](https://arxiv.org/pdf/2104.13840.pdf)
-
 - [ ] [Incorporating Convolution Designs into Visual Transformers](https://arxiv.org/pdf/2103.11816.pdf)
+
+- [ ] [CONDITIONAL POSITIONAL ENCODINGS FOR VISION TRANSFORMERS](https://openreview.net/pdf?id=3KWnuT-R1bh)
+
+## Papers Read and not Implemented
+
+- [ ] [Twins: Revisiting the Design of Spatial Attention in Vision Transformers](https://arxiv.org/pdf/2104.13840.pdf)
