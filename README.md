@@ -20,6 +20,8 @@
 
 - [ ] [CONDITIONAL POSITIONAL ENCODINGS FOR VISION TRANSFORMERS](https://openreview.net/pdf?id=3KWnuT-R1bh)
 
+- [ ] [CvT: Introducing Convolutions to Vision Transformers](https://openaccess.thecvf.com/content/ICCV2021/papers/Wu_CvT_Introducing_Convolutions_to_Vision_Transformers_ICCV_2021_paper.pdf)
+
 ## Papers Read and not Implemented
 
 - [ ] [Twins: Revisiting the Design of Spatial Attention in Vision Transformers](https://arxiv.org/pdf/2104.13840.pdf)

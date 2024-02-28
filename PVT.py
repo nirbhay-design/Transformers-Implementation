@@ -79,6 +79,25 @@ class SpatialReduction(nn.Module):
         x = self.ln(x)
         return x
     
+class SpatialReductionConv(nn.Module):
+    def __init__(self, image_res, reduction_ratio, embed_dim):
+        super().__init__()
+        self.image_res = getHW(image_res)
+        self.rr = getHW(reduction_ratio)
+        assert self.image_res[0] % self.rr[0] == 0 and self.image_res[1] % self.rr[1] == 0, "image_size should be divisible by reduction ratio"
+        self.reduction_conv = nn.Conv2d(embed_dim, embed_dim, kernel_size=3, padding = 1, stride = reduction_ratio)
+        self.ln = nn.LayerNorm(embed_dim)
+
+    def forward(self, x):
+        # x.shape -> [B, HW, embed_dim]
+        B, HW, embed_dim = x.shape
+        # x.shape -> [B, embed_dim, H, W]
+        x = x.reshape(B, self.image_res[0], self.image_res[1], embed_dim).permute(0, 3, 1, 2)
+        x = self.reduction_conv(x)
+        x = x.permute(0, 2, 3, 1).reshape(B, -1, embed_dim)
+        x = self.ln(x)
+        return x
+    
 class MSA(nn.Module):
     def __init__(self, num_heads = 8, embed_dim = 128):
         super().__init__()
@@ -118,7 +137,7 @@ class SRA(nn.Module):
         self.embed_dim = embed_dim
 
         self.msa = MSA(self.num_heads, self.embed_dim)
-        self.spatial_reduction = SpatialReduction(self.image_res, self.reduction_ratio, self.embed_dim)
+        self.spatial_reduction = SpatialReductionConv(self.image_res, self.reduction_ratio, self.embed_dim)
 
     def forward(self, x):
         sr_x = self.spatial_reduction(x)
