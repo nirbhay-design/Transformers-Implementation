@@ -155,18 +155,46 @@ class Vit(nn.Module):
         x = x.flatten(1)
         x = self.classification(x)
         return x
+    
+def vit_base(image_size, num_classes):
+    vit = Vit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              encoder_layers=12,
+              msa_heads=12,
+              embed_dim=768,
+              hidden_dim=3072,
+              num_class=num_classes,
+              dropout=0.6)
+    return vit
+    
+def vit_large(image_size, num_classes):
+    vit = Vit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              encoder_layers=24,
+              msa_heads=16,
+              embed_dim=1024,
+              hidden_dim=4096,
+              num_class=num_classes,
+              dropout=0.6)
+    return vit
+
+def vit_huge(image_size, num_classes):
+    vit = Vit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              encoder_layers=32,
+              msa_heads=16,
+              embed_dim=1280,
+              hidden_dim=5120,
+              num_class=num_classes,
+              dropout=0.6)
+    return vit
 
 if __name__ == "__main__":
     a = torch.rand(2,3,224,224)
-    vit = Vit(image_size=224,
-              in_channels=3,
-              patch_size=16,
-              encoder_layers=8,
-              msa_heads=8,
-              embed_dim=256,
-              hidden_dim=256,
-              num_class=10,
-              dropout=0.6)
+    vit = vit_huge(224, 1000)
 
     out = vit(a)
     params = lambda x: sum([y.numel() for y in x.parameters()])
