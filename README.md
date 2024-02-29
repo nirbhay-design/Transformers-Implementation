@@ -16,9 +16,9 @@
 
 - [x] [Deep Vision Transformer: DViT](https://arxiv.org/pdf/2103.11886.pdf)
 
-- [ ] [Incorporating Convolution Designs into Visual Transformers](https://openaccess.thecvf.com/content/ICCV2021/papers/Yuan_Incorporating_Convolution_Designs_Into_Visual_Transformers_ICCV_2021_paper.pdf)
+- [x] [Incorporating Convolution Designs into Visual Transformers](https://openaccess.thecvf.com/content/ICCV2021/papers/Yuan_Incorporating_Convolution_Designs_Into_Visual_Transformers_ICCV_2021_paper.pdf)
 
-- [ ] [CONDITIONAL POSITIONAL ENCODINGS FOR VISION TRANSFORMERS](https://openreview.net/pdf?id=3KWnuT-R1bh)
+- [x] [CONDITIONAL POSITIONAL ENCODINGS FOR VISION TRANSFORMERS](https://openreview.net/pdf?id=3KWnuT-R1bh)
 
 - [ ] [CvT: Introducing Convolutions to Vision Transformers](https://openaccess.thecvf.com/content/ICCV2021/papers/Wu_CvT_Introducing_Convolutions_to_Vision_Transformers_ICCV_2021_paper.pdf)
 
