@@ -136,11 +136,11 @@ class MLP(nn.Module):
         return self.mlp(x)
     
 class TransformerEncoder(nn.Module):
-    def __init__(self, image_size, heads, embed_dim, expand_ratio, dropout=0.0):
+    def __init__(self, image_size, heads, embed_dim, expand_ratio, leff_kernel_size, dropout=0.0):
         super().__init__()
 
         self.msa = MSA(heads, embed_dim, dropout=dropout)
-        self.mlp = LeFF(image_size, embed_dim, expand_ratio, kernel_size = 3)
+        self.mlp = LeFF(image_size, embed_dim, expand_ratio, kernel_size = leff_kernel_size)
         self.layer_norm = nn.LayerNorm(embed_dim)
         self.dropout = nn.Dropout(dropout)
 
@@ -160,6 +160,7 @@ class Ceit(nn.Module):
                  msa_heads = 8, 
                  embed_dim = 128, 
                  expand_ratio = 4, 
+                 leff_kernel_size = 3,
                  num_class = 10,
                  dropout=0.0):
         
@@ -181,6 +182,7 @@ class Ceit(nn.Module):
                                     msa_heads,
                                     embed_dim,
                                     expand_ratio,
+                                    leff_kernel_size,
                                     dropout = dropout)
             )
 
@@ -211,6 +213,7 @@ def ceit_T(image_size, num_class):
         embed_dim = 192,
         expand_ratio = 4,
         num_class = num_class,
+        leff_kernel_size=3,
         dropout = 0.6
     )
 
@@ -227,8 +230,9 @@ def ceit_S(image_size, num_class):
         embed_dim = 384,
         expand_ratio = 4,
         num_class = num_class,
+        leff_kernel_size=3,
         dropout = 0.6
-    )
+    ) 
 
     return ceit
 
@@ -243,16 +247,17 @@ def ceit_B(image_size, num_class):
         embed_dim = 768,
         expand_ratio = 4,
         num_class = num_class,
+        leff_kernel_size=3,
         dropout = 0.6
     )
 
     return ceit
 
 if __name__ == "__main__":
-    a = torch.rand(2,3,224,224)
+    a = torch.rand(2,3,384,384)
     params = lambda x: sum([y.numel() for y in x.parameters()])
     
-    ceit = ceit_B(224, 1000)
+    ceit = ceit_T(384, 1000)
     out = ceit(a)
     print(params(ceit))
     print(out.shape)
