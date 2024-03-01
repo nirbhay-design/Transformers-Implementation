@@ -24,4 +24,6 @@
 
 ## Papers Read and not Implemented
 
-- [ ] [Twins: Revisiting the Design of Spatial Attention in Vision Transformers](https://arxiv.org/pdf/2104.13840.pdf)
+- [x] [Twins: Revisiting the Design of Spatial Attention in Vision Transformers](https://arxiv.org/pdf/2104.13840.pdf)
+
+- [ ] [EfficientViT: Memory Efficient Vision Transformer with Cascaded Group Attention](https://www.microsoft.com/en-us/research/uploads/prod/2023/06/EfficientViT.pdf)
