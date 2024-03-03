@@ -288,12 +288,11 @@ class Detr(nn.Module):
         return {'pred_logits':logits, 'pred_boxes':boxes}
     
 params = lambda x: torch.tensor([y.numel() for y in x.parameters()]).sum()
-    
 
-if __name__ == "__main__":
+def DETR(num_classes):
     detr = Detr(
         backbone_layers=['conv1', 'bn1', 'relu', 'maxpool', 'layer1', 'layer2', 'layer3', 'layer4'],
-        num_classes=4,
+        num_classes=num_classes,
         num_obj_queries=100,
         encoder_layers=6,
         decoder_layers=6,
@@ -302,6 +301,11 @@ if __name__ == "__main__":
         embed_dim=256,
         dropout=0.1
     )
+
+    return detr
+
+if __name__ == "__main__":
+    detr = DETR(num_classes=4)
 
     data = torch.rand(2,3,256,512)
     out_dict = detr(data)

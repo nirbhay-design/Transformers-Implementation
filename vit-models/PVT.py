@@ -312,7 +312,7 @@ if __name__ == "__main__":
     a = torch.rand(2,3,224,224)
     params = lambda x: sum([y.numel() for y in x.parameters()])
 
-    pvt = PVT_large(224, 20)
+    pvt = PVT_large(224, 1000)
     print(params(pvt))
     out, feat_maps = pvt(a)
     for i in feat_maps:

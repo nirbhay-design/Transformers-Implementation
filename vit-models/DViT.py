@@ -155,18 +155,46 @@ class DVit(nn.Module):
         x = x.flatten(1)
         x = self.classification(x)
         return x
+    
+def dvit_16b(image_size, num_classes):
+    dvit = DVit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              encoder_layers=16,
+              msa_heads=12,
+              embed_dim=384,
+              hidden_dim=1152,
+              num_class=num_classes,
+              dropout=0.6)
+    return dvit 
 
-if __name__ == "__main__":
-    a = torch.rand(2,3,224,224)
-    dvit = DVit(image_size=224,
+def dvit_24b(image_size, num_classes):
+    dvit = DVit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              encoder_layers=24,
+              msa_heads=12,
+              embed_dim=384,
+              hidden_dim=1152,
+              num_class=num_classes,
+              dropout=0.6)
+    return dvit 
+
+def dvit_32b(image_size, num_classes):
+    dvit = DVit(image_size=image_size,
               in_channels=3,
               patch_size=16,
               encoder_layers=32,
-              msa_heads=8,
-              embed_dim=256,
-              hidden_dim=256,
-              num_class=10,
+              msa_heads=12,
+              embed_dim=384,
+              hidden_dim=1152,
+              num_class=num_classes,
               dropout=0.6)
+    return dvit 
+
+if __name__ == "__main__":
+    a = torch.rand(2,3,224,224)
+    dvit = dvit_16b(224,1000)
 
     out = dvit(a)
     params = lambda x: sum([y.numel() for y in x.parameters()])

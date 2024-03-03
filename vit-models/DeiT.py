@@ -174,19 +174,46 @@ class DeitLoss(nn.Module):
         self.final_loss = self.ce_loss + self.lambd * self.kl_div_loss
 
         return self.final_loss
+    
+def deit_ti(image_size, num_classes):
+    deit = Deit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              encoder_layers=12,
+              msa_heads=3,
+              embed_dim=192,
+              hidden_dim= 4 * 192,
+              num_class=num_classes,
+              dropout=0.6)
+    return deit 
+
+def deit_s(image_size, num_classes):
+    deit = Deit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              encoder_layers=12,
+              msa_heads=6,
+              embed_dim=384,
+              hidden_dim=4 * 384,
+              num_class=num_classes,
+              dropout=0.6)
+    return deit 
+
+def deit_b(image_size, num_classes):
+    deit = Deit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              encoder_layers=12,
+              msa_heads=12,
+              embed_dim=768,
+              hidden_dim=4 * 768,
+              num_class=num_classes,
+              dropout=0.6)
+    return deit 
 
 if __name__ == "__main__":
     a = torch.rand(2,3,224,224)
-    deit = Deit(image_size=224,
-              in_channels=3,
-              patch_size=16,
-              encoder_layers=8,
-              msa_heads=8,
-              embed_dim=256,
-              hidden_dim=256,
-              num_class=10,
-              dropout=0.6)
-
+    deit = deit_ti(224, 1000)
     cls, dist = deit(a)
     params = lambda x: sum([y.numel() for y in x.parameters()])
     # print(deit)
