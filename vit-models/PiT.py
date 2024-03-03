@@ -128,13 +128,18 @@ class PoolingLayer(nn.Module):
         self.embed_dim = embed_dim
 
         self.cls_fc = nn.Linear(self.embed_dim, 2 * self.embed_dim)
+
+        padding = (kernel_size - 1) // 2
         self.depth_wise_conv = nn.Conv2d(
             embed_dim, 
             2 * embed_dim, 
             kernel_size = kernel_size, 
-            padding = (kernel_size - 1) // 2, 
+            padding = padding, 
             stride = stride, 
             groups = embed_dim)
+        out_img_h = (self.image_size[0] + 2 * padding - kernel_size) // stride + 1
+        out_img_w = (self.image_size[1] + 2 * padding - kernel_size) // stride + 1
+        self.out_image_size = (out_img_h, out_img_w)
         
     def forward(self, x):
         # x: shape: [B, num_embedding + 1, embed_dim]
@@ -185,14 +190,16 @@ class Pit(nn.Module):
                     dropout = dropout) for _ in range(depths[i])]
             )
 
-            transformer_layer_list.append(PoolingLayer(
+            pool_layer_i = PoolingLayer(
                 image_size,
                 embed_dim,
                 kernel_size = stride + 1,
                 stride = stride,
-            ))  
+            )
 
-            image_size = (image_size[0] // 2, image_size[1] // 2)
+            transformer_layer_list.append(pool_layer_i)  
+
+            image_size = pool_layer_i.out_image_size
             embed_dim *= 2
         
         self.transformer_layer_list = nn.ModuleList(transformer_layer_list)
@@ -202,7 +209,6 @@ class Pit(nn.Module):
         x = self.patch_creation(x)
         for layer in self.transformer_layer_list:
             x = layer(x)
-            print(x.shape)
         x = x[:,0,:]
         x = x.flatten(1)
         x = self.classification(x)
@@ -215,8 +221,8 @@ def pit_ti(image_size, num_classes):
               msa_heads=[2, 4, 8],
               stride = 2,
               depths = [2, 6, 4],
-              embed_dim=64,
-              hidden_dim=64,
+              embed_dim=32,
+              hidden_dim=4 * 32,
               num_class=num_classes,
               dropout=0.6)
     return pit
@@ -228,8 +234,8 @@ def pit_xs(image_size, num_classes):
               msa_heads=[2, 4, 8],
               stride = 2,
               depths = [2, 6, 4],
-              embed_dim=96,
-              hidden_dim=96,
+              embed_dim=48,
+              hidden_dim=4 * 48,
               num_class=num_classes,
               dropout=0.6)
     return pit
@@ -241,8 +247,8 @@ def pit_s(image_size, num_classes):
               msa_heads=[3, 6, 12],
               stride = 2,
               depths = [2, 6, 4],
-              embed_dim=144,
-              hidden_dim=144,
+              embed_dim=72,
+              hidden_dim=4 * 72,
               num_class=num_classes,
               dropout=0.6)
     return pit
@@ -250,23 +256,23 @@ def pit_s(image_size, num_classes):
 def pit_b(image_size, num_classes):
     pit = Pit(image_size=image_size,
               in_channels=3,
-              patch_size=16,
+              patch_size=14,
               msa_heads=[4, 8, 16],
               stride = 2,
               depths = [3, 6, 4],
-              embed_dim=256,
-              hidden_dim=256,
+              embed_dim=128,
+              hidden_dim=4 * 128,
               num_class=num_classes,
               dropout=0.6)
     return pit
 
 if __name__ == "__main__":
     a = torch.rand(2,3,224,224)
-    pit = pit_ti(224, 1000)
+    pit = pit_b(224, 1000)
 
     out = pit(a)
     params = lambda x: sum([y.numel() for y in x.parameters()])
-    print(pit)
+    # print(pit)
     print(params(pit))
     print(out.shape)
     
