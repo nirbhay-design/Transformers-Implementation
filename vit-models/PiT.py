@@ -202,23 +202,67 @@ class Pit(nn.Module):
         x = self.patch_creation(x)
         for layer in self.transformer_layer_list:
             x = layer(x)
+            print(x.shape)
         x = x[:,0,:]
         x = x.flatten(1)
         x = self.classification(x)
         return x
-
-if __name__ == "__main__":
-    a = torch.rand(2,3,224,224)
-    pit = Pit(image_size=224,
+    
+def pit_ti(image_size, num_classes):
+    pit = Pit(image_size=image_size,
               in_channels=3,
-              patch_size=14,
+              patch_size=16,
               msa_heads=[2, 4, 8],
+              stride = 2,
+              depths = [2, 6, 4],
+              embed_dim=64,
+              hidden_dim=64,
+              num_class=num_classes,
+              dropout=0.6)
+    return pit
+
+def pit_xs(image_size, num_classes):
+    pit = Pit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              msa_heads=[2, 4, 8],
+              stride = 2,
+              depths = [2, 6, 4],
+              embed_dim=96,
+              hidden_dim=96,
+              num_class=num_classes,
+              dropout=0.6)
+    return pit
+
+def pit_s(image_size, num_classes):
+    pit = Pit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              msa_heads=[3, 6, 12],
               stride = 2,
               depths = [2, 6, 4],
               embed_dim=144,
               hidden_dim=144,
-              num_class=10,
+              num_class=num_classes,
               dropout=0.6)
+    return pit
+
+def pit_b(image_size, num_classes):
+    pit = Pit(image_size=image_size,
+              in_channels=3,
+              patch_size=16,
+              msa_heads=[4, 8, 16],
+              stride = 2,
+              depths = [3, 6, 4],
+              embed_dim=256,
+              hidden_dim=256,
+              num_class=num_classes,
+              dropout=0.6)
+    return pit
+
+if __name__ == "__main__":
+    a = torch.rand(2,3,224,224)
+    pit = pit_ti(224, 1000)
 
     out = pit(a)
     params = lambda x: sum([y.numel() for y in x.parameters()])
