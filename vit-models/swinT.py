@@ -71,7 +71,7 @@ class SWMSA(nn.Module):
         self.num_heads = num_heads
         self.embed_dim = embed_dim
         self.image_resolution = image_resolution
-        self.window_size = window_size
+        self.window_size = getHW(window_size)
         self.shift_size = shift_size
 
         self.proj = nn.Linear(embed_dim, embed_dim)
