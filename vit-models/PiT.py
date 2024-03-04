@@ -37,20 +37,47 @@ class PatchEmbedding(nn.Module):
 
         return patch_embeddings
     
+class PatchEmbeddingConv(nn.Module):
+    def __init__(self, image_size, in_channels = 3, out_channels = 128, patch_size = 16, stride = 1, padding = 0):
+        super().__init__()
+        ih, iw = getHW(image_size)
+        kh, kw = getHW(patch_size)
+        sh, sw = getHW(stride)
+        ph, pw = getHW(padding)
+        self.patch_conv = nn.Conv2d(in_channels, out_channels, kernel_size = patch_size, stride = stride, padding = padding)
+        self.patch_size = patch_size
+        self.out_img_size = (
+            (ih + 2 * ph - kh) // sh + 1,
+            (iw + 2 * pw - kw) // sw + 1
+        )
+
+    def forward(self, x):
+        # x: [B, C, H, W]
+        x = self.patch_conv(x) # [B, out_channels, H_1, W_1]
+        B, embed_dim, H, W = x.shape
+        patch_embeddings = x.permute(0, 2, 3, 1).reshape(B, H*W, embed_dim)
+
+        return patch_embeddings
+    
 class ImageWPosEnc(nn.Module):
-    def __init__(self, image_size = 224, in_channels = 3, patch_size = 8, embed_size = 128):
+    def __init__(self, image_size = 224, in_channels = 3, patch_size = 8, embed_size = 128, stride = 1, padding = 0):
         super().__init__()
         self.image_size = getHW(image_size) 
         self.in_channels = in_channels
         self.patch_size = getHW(patch_size) 
         self.embed_size = embed_size 
 
-        self.patch_embed = PatchEmbedding(self.image_size,
-                                        self.in_channels,
-                                        self.patch_size,
-                                        self.embed_size)
+        self.patch_embed = PatchEmbeddingConv(
+            image_size=image_size,
+            in_channels=in_channels,
+            out_channels=embed_size,
+            patch_size = patch_size,
+            stride = stride,
+            padding = padding
+        )
 
-        self.num_embedding = (self.image_size[0] // self.patch_size[0]) * (self.image_size[1] // self.patch_size[1])
+        self.out_image_size = self.patch_embed.out_img_size
+        self.num_embedding = self.out_image_size[0] * self.out_image_size[1]
         self.pos_encoding = nn.Parameter(torch.rand(1, self.num_embedding + 1, self.embed_size))
         self.cls_token = nn.Parameter(torch.rand(1, 1, self.embed_size))
 
@@ -137,6 +164,7 @@ class PoolingLayer(nn.Module):
             padding = padding, 
             stride = stride, 
             groups = embed_dim)
+        
         out_img_h = (self.image_size[0] + 2 * padding - kernel_size) // stride + 1
         out_img_w = (self.image_size[1] + 2 * padding - kernel_size) // stride + 1
         self.out_image_size = (out_img_h, out_img_w)
@@ -172,12 +200,14 @@ class Pit(nn.Module):
             image_size = image_size, 
             in_channels = in_channels, 
             patch_size = patch_size, 
-            embed_size = embed_dim
+            embed_size = embed_dim,
+            stride = stride,
+            padding = 0
         )
         patch_size = getHW(patch_size)
         image_size = getHW(image_size)
 
-        image_size = (image_size[0] // patch_size[0], image_size[1] // patch_size[1])
+        image_size = self.patch_creation.out_image_size
 
         transformer_layer_list = []
 
@@ -190,17 +220,18 @@ class Pit(nn.Module):
                     dropout = dropout) for _ in range(depths[i])]
             )
 
-            pool_layer_i = PoolingLayer(
-                image_size,
-                embed_dim,
-                kernel_size = stride + 1,
-                stride = stride,
-            )
+            if i < len(depths) - 1:
+                pool_layer_i = PoolingLayer(
+                    image_size,
+                    embed_dim,
+                    kernel_size = 3,
+                    stride = 2,
+                )
 
-            transformer_layer_list.append(pool_layer_i)  
+                transformer_layer_list.append(pool_layer_i)  
 
-            image_size = pool_layer_i.out_image_size
-            embed_dim *= 2
+                image_size = pool_layer_i.out_image_size
+                embed_dim *= 2
         
         self.transformer_layer_list = nn.ModuleList(transformer_layer_list)
         self.classification = nn.Linear(embed_dim, num_class)
@@ -219,10 +250,10 @@ def pit_ti(image_size, num_classes):
               in_channels=3,
               patch_size=16,
               msa_heads=[2, 4, 8],
-              stride = 2,
+              stride = 8,
               depths = [2, 6, 4],
-              embed_dim=32,
-              hidden_dim=4 * 32,
+              embed_dim= 64,
+              hidden_dim=4 * 64,
               num_class=num_classes,
               dropout=0.6)
     return pit
@@ -232,10 +263,10 @@ def pit_xs(image_size, num_classes):
               in_channels=3,
               patch_size=16,
               msa_heads=[2, 4, 8],
-              stride = 2,
+              stride = 8,
               depths = [2, 6, 4],
-              embed_dim=48,
-              hidden_dim=4 * 48,
+              embed_dim=96,
+              hidden_dim=4 * 96,
               num_class=num_classes,
               dropout=0.6)
     return pit
@@ -245,10 +276,10 @@ def pit_s(image_size, num_classes):
               in_channels=3,
               patch_size=16,
               msa_heads=[3, 6, 12],
-              stride = 2,
+              stride = 8,
               depths = [2, 6, 4],
-              embed_dim=72,
-              hidden_dim=4 * 72,
+              embed_dim=144,
+              hidden_dim=4 * 144,
               num_class=num_classes,
               dropout=0.6)
     return pit
@@ -258,17 +289,17 @@ def pit_b(image_size, num_classes):
               in_channels=3,
               patch_size=14,
               msa_heads=[4, 8, 16],
-              stride = 2,
+              stride = 7,
               depths = [3, 6, 4],
-              embed_dim=128,
-              hidden_dim=4 * 128,
+              embed_dim=256,
+              hidden_dim=4 * 256,
               num_class=num_classes,
               dropout=0.6)
     return pit
 
 if __name__ == "__main__":
     a = torch.rand(2,3,224,224)
-    pit = pit_b(224, 1000)
+    pit = pit_xs(224, 1000)
 
     out = pit(a)
     params = lambda x: sum([y.numel() for y in x.parameters()])
