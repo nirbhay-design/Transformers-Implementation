@@ -242,7 +242,7 @@ class PVT(nn.Module):
             x = stage(x)
             feat_maps.append(x)
         x = self.fc_layer(self.silu(self.adaptive_avg_pool(x).flatten(1)))
-        return x, feat_maps
+        return x, *feat_maps
     
 def PVT_tiny(image_size, num_classes):
     pvt = PVT(

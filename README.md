@@ -43,9 +43,9 @@ python train.py vit_models.CvT.cvt_21
 python train.py vit_models.CvT.cvt_w24
 
 # Deit models
-python train.py vit_models.Deit.deit_ti
-python train.py vit_models.Deit.deit_s
-python train.py vit_models.Deit.deit_b
+python train.py vit_models.DeiT.deit_ti
+python train.py vit_models.DeiT.deit_s
+python train.py vit_models.DeiT.deit_b
 
 # DeTr models
 python train.py vit_models.DeTR.DETR
