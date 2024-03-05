@@ -1,4 +1,4 @@
-## The Repo contains the implementation of various research papers of transformers, 
+## Scratch implementation of Transformers research papers for vision task 
 
 ## Papers Implemented
 
@@ -24,8 +24,14 @@
 
 - [x] [End-to-End Object Detection with Transformers](https://arxiv.org/pdf/2005.12872.pdf)
 
-## Papers Read and not Implemented
+## Load The model
 
-- [x] [Twins: Revisiting the Design of Spatial Attention in Vision Transformers](https://arxiv.org/pdf/2104.13840.pdf)
+```bash
+# ceit models
+python train.py vit_models.Ceit.ceit_T
+python train.py vit_models.Ceit.ceit_S
+python train.py vit_models.Ceit.ceit_B
 
-- [ ] [EfficientViT: Memory Efficient Vision Transformer with Cascaded Group Attention](https://www.microsoft.com/en-us/research/uploads/prod/2023/06/EfficientViT.pdf)
+#
+```
+
