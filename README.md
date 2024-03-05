@@ -32,6 +32,50 @@ python train.py vit_models.Ceit.ceit_T
 python train.py vit_models.Ceit.ceit_S
 python train.py vit_models.Ceit.ceit_B
 
-#
+# CPVT models
+python train.py vit_models.CPVT.cpvt_ti
+python train.py vit_models.CPVT.cpvt_s
+python train.py vit_models.CPVT.cpvt_b
+
+# cvt models
+python train.py vit_models.CvT.cvt_13
+python train.py vit_models.CvT.cvt_21
+python train.py vit_models.CvT.cvt_w24
+
+# Deit models
+python train.py vit_models.Deit.deit_ti
+python train.py vit_models.Deit.deit_s
+python train.py vit_models.Deit.deit_b
+
+# DeTr models
+python train.py vit_models.DeTR.DETR
+
+# DViT models
+python train.py vit_models.DViT.dvit_16b
+python train.py vit_models.DViT.dvit_24b
+python train.py vit_models.DViT.dvit_32b
+
+# PiT models
+python train.py vit_models.PiT.pit_ti
+python train.py vit_models.PiT.pit_xs
+python train.py vit_models.PiT.pit_s
+python train.py vit_models.PiT.pit_b
+
+# PVT models
+python train.py vit_models.PVT.PVT_tiny
+python train.py vit_models.PVT.PVT_small
+python train.py vit_models.PVT.PVT_medium
+python train.py vit_models.PVT.PVT_large
+
+# swinT models
+python train.py vit_models.swinT.swinT_T
+python train.py vit_models.swinT.swinT_S
+python train.py vit_models.swinT.swinT_B
+python train.py vit_models.swinT.swinT_L
+
+# vit models
+python train.py vit_models.Vit.vit_base
+python train.py vit_models.Vit.vit_large
+python train.py vit_models.Vit.vit_huge
 ```
 
