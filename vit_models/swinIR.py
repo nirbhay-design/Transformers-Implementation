@@ -36,8 +36,10 @@ class SWMSA(nn.Module):
     def __init__(self, image_resolution, window_size = 2, num_heads = 8, embed_dim = 128, shift_size = 0, dropout=0.0):
         super().__init__()
         assert embed_dim % num_heads == 0, "num heads should be a multiple of embed_dim"
-        h,w = image_resolution
-        window_size_h, window_size_w = getHW(window_size)
+        self.image_resolution = getHW(image_resolution)
+        self.window_size = getHW(window_size)
+        h,w = self.image_resolution
+        window_size_h, window_size_w = self.window_size
         shift_size_h, shift_size_w = getHW(shift_size)
         assert h % window_size_h == 0  and w % window_size_w == 0, f"height: {h} and width: {w} must be divisible by window size: {window_size_h}, {window_size_w}"
         assert shift_size_h <= window_size_h and shift_size_w <= window_size_w, "shift_size should be less than window_size"
@@ -45,8 +47,6 @@ class SWMSA(nn.Module):
         self.attention = Attention(self.head_dim)
         self.num_heads = num_heads
         self.embed_dim = embed_dim
-        self.image_resolution = image_resolution
-        self.window_size = getHW(window_size)
         self.shift_size = shift_size
 
         self.proj = nn.Linear(embed_dim, embed_dim)
@@ -171,6 +171,7 @@ class SWMSA(nn.Module):
         mask = self.create_mask(self.image_resolution,
                                 self.window_size,
                                 self.shift_size)
+        mask = mask.to(x.device)
         # mask based window attention
         shifted_attention = self.window_attention(shifted_x, mask=mask)
 
@@ -331,6 +332,21 @@ class SwinIR(nn.Module):
         deep_features = self.deep_feature_extractor(shallow_features)
         residual_features = shallow_features + deep_features
         return residual_features
+    
+def swinIR(image_res):
+    swinir = SwinIR(
+        image_resolution = image_res,
+        in_channels=3,
+        num_heads = 6,
+        window_size=4,
+        shift_size=2,
+        embed_dim = 60,
+        num_rstb = 6,
+        num_stl = 3,
+        dropout = 0.6
+    )
+
+    return swinir
 
 
 if __name__ == "__main__":
