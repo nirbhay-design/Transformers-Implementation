@@ -1,6 +1,8 @@
 import importlib 
 import sys 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 def load_model(directory):
     directory_list = directory.rsplit(".", 1)
@@ -27,6 +29,54 @@ def test_model(directory, arg, device_name):
             print(f"{key}: {value.shape}")
     else:
         print(out.shape)
+
+def calculate_acc(scores, labels):
+    num_samples = labels.shape[0]
+    scores = F.softmax(scores, dim = 1)
+    preds, _  = scores.max(dim = 1)
+    accuracy = (preds == labels).sum() / num_samples
+    return accuracy
+
+def train_cls(
+        model,
+        dataset,
+        optimizer,
+        lossfunction,
+        epochs,
+        return_logs,
+        device
+):
+    model = model.to(device)
+
+    for epoch in range(epochs):
+        for idx, (image, labels) in enumerate(dataset):
+            image = image.to(device)
+            labels = labels.to(device)
+
+            scores = model(image)
+            loss = lossfunction(scores, labels)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            cur_train_acc = calculate_acc(scores, labels)
+            print(f"current_train_acc: {cur_train_acc}")
+
+            if return_logs:
+                print(f"{idx}/{len(dataset)}")
+
+    return model
+
+@torch.no_grad()
+def test_cls(
+        model,
+        dataset,
+        device
+):
+    pass    
+
+
 
 if __name__ == "__main__":
     directory = sys.argv[1]
