@@ -330,6 +330,7 @@ class SwinIR(nn.Module):
         shallow_features = self.shallow_feature_extractor(x)
         print(shallow_features.shape)
         deep_features = self.deep_feature_extractor(shallow_features)
+        print(deep_features.shape)
         residual_features = shallow_features + deep_features
         return residual_features
     
@@ -354,17 +355,7 @@ if __name__ == "__main__":
     num_classes = 1000
     params = lambda x: sum([i.numel() for i in x.parameters()])
     image = torch.rand(2,3,224,224)
-    swinir = SwinIR(
-        image_resolution = image_res,
-        in_channels=3,
-        num_heads = 6,
-        window_size=4,
-        shift_size=2,
-        embed_dim = 60,
-        num_rstb = 6,
-        num_stl = 3,
-        dropout = 0.6
-    )
+    swinir = swinIR(image_res=image_res)
     print(params(swinir))
     print(swinir(image).shape)
     # swin = swinT_T(image_res, num_classes)
